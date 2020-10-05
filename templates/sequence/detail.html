@@ -1,0 +1,1391 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block app_sequence %}active{% endblock %}
+{% block app_style %}<link rel="stylesheet" href="{% static 'css/sequence_style.css' %}">{% endblock %}
+{% block content %}
+
+<link href='https://unpkg.com/mapillary-js@2.20.0/dist/mapillary.min.css' rel='stylesheet' />
+<div class="main-body">
+    <div class="left-side p-3 d-flex flex-column justify-content-between">
+        <div>
+            <div class="text-right mt-2 mb-2">
+                <button type="button" class="btn btn-info" onclick="window.history.back()">Back</button>
+            </div>
+            <div class="page-header">
+                <div class="pt-3 mb-3">
+                    <h4>
+                        {{ pageName }}
+                    </h4>
+                </div>
+            </div>
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert m-3 alert-{% if message.tags %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="p-2 item-detail card">
+                <div class="text-right mb-3">
+                    <div class="d-flex flex-row align-items-center">
+
+
+                    </div>
+                </div>
+
+                <div class="mtp-sequence-data">
+                    <div class="sequence-title text-center text-info mt-1" id="sequence_name">
+                        <h3>
+                            {{ sequence.name }}
+                        </h3>
+                    </div>
+
+                    <div class="sequence-description" id="sequence_description">
+                        <p class="mb-1">
+                            {{ sequence.description }}
+                        </p>
+                    </div>
+
+                    <div class="sequence-transport-type mt-2 d-flex flex-row justify-content-start" id="sequence_transport_type" style="color: blueviolet;">
+                        <p class="mb-1 mr-3 item-transport-type parent-type text-center">
+                            <i class="transport-type-icon fas fa-{{ sequence.transport_type.parent.icon.font_awesome }}"></i>
+                            <br>
+                            {{ sequence.transport_type.parent }}
+                        </p>
+                        <p class="mb-1 mr-3 item-transport-type sub-type text-center">
+                            <i class="transport-type-icon fas fa-{{ sequence.transport_type.icon.font_awesome }}"></i>
+                            <br>
+                            {{ sequence.transport_type.name }}
+                        </p>
+                    </div>
+
+                    <div class="sequence-tag mt-2" id="sequence_tags">
+                        {% for tag in sequence.getTags %}
+                            <span class="tag pl-1 pr-1 mt-1 mb-1 mr-1">
+                                {{ tag }}
+                            </span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="sequence-tour-count" id="sequence_tour_count">
+                        <p class="mb-1">
+                            Tours ({{ tour_count }})
+                        </p>
+                    </div>
+
+                    <div class="guidebook-created-at d-flex flex-row align-items-center justify-content-between mt-2">
+                        <div class="text-secondary">
+                            <p >
+                            {{ sequence.captured_at }}
+                            </p>
+                            <p class="">
+                                {{ sequence.created_at }}
+                            </p>
+                        </div>
+                        <a href="{% url 'account.profile' username=sequence.user.username %}">
+                            <span class="" style="color: brown;">{{ sequence.user.username }}</span>
+                        </a>
+                    </div>
+
+                    <canvas id="myChart" width="350" height="150"></canvas>
+
+                    <div class="mt-2 d-flex flex-row justify-content-between" id="mapillary-view">
+                         <a target="_blank" href="https://www.openstreetmap.org/edit?editor=id#map=18/{{ sequence.getFirstPointLat }}/{{ sequence.getFirstPointLng }}&photo_overlay=mapillary">
+                             <img style="width: 40px" src="{% static "images/icon/90606167-57892980-e1f7-11ea-96e7-ed01ef35b2b7.png" %}">
+                         </a>
+                         <a target="_blank" href="https://www.mapillary.com/map/s/{{ sequence.seq_key }}">
+                             <img style="width: 170px" src="{% static "images/icon/mapillary_icon.png" %}">
+                         </a>
+                    </div>
+
+                    <div class="mt-2" id="mapillary-view">
+
+                    </div>
+                </div>
+
+                {% if user.is_authenticated and sequence.user == user %}
+                    <div class="edit-form d-none">
+                        <form id="edit_form">
+                            {% csrf_token %}
+                            {{ addSequenceForm.media }}
+                            {{ addSequenceForm.as_p }}
+                            <div class="text-right mt-3">
+                                <button type="button" class="btn btn-primary btn-save btn-sm">Save</button>
+                                <button type="button" class="btn btn-dark btn-cancel btn-sm">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="mt-3 text-right actions">
+                        <button type="button" class="btn btn-primary btn-edit btn-sm">Edit</button>
+                    </div>
+                {% endif %}
+
+                <hr class="mt-3 mb-1">
+
+                <div class="sequence-others float-right d-flex flex-row justify-content-between mt-2">
+                    <div class="scenes text-center">
+                        {% if sequence.getImageCount == 0 %}
+                            <img style="width: 40px" src="{% static 'images/icon/icons8-photo-gallery-100 (1).png' %}" />
+                        {% else %}
+                            <img style="width: 40px" src="{% static 'images/icon/icons8-photo-gallery-100.png' %}" />
+                        {% endif %}
+                        <span class="text-center m-0">
+                            {{ sequence.getImageCount }} Photos
+                        </span>
+                    </div>
+                    <div class="like text-center">
+                        {% if sequence.getLikeCount == 0 %}
+                            <img style="width: 40px" src="{% static 'images/icon/icons8-love-100.png' %}" />
+                        {% else %}
+                            <img style="width: 40px" src="{% static 'images/icon/icons8-love-48.png' %}" />
+                        {% endif %}
+                        <span class="text-center m-0">
+                            {{ sequence.getLikeCount }} Likes
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% if request.user.is_authenticated and request.user == sequence.user %}
+                <div class="card mt-3 text-center">
+                    <div class="pt-2 pb-2">
+                        <form method="POST" id="delete_sequence_form" class="d-flex align-items-center" action="{% url 'sequence.sequence_delete' unique_id=sequence.unique_id %}">
+                            {% csrf_token %}
+                            <div class="col publish-sequence text-center">
+                                {% if sequence.is_published %}
+                                    <button type="button" class="btn btn-secondary" id="publish_swithch_sequence">Unpublish</button>
+                                {% else %}
+                                    <button type="button" class="btn btn-success" id="publish_swithch_sequence">Publish Now</button>
+                                {% endif %}
+                            </div>
+
+                            <div class="col text-center delete-sequence">
+                                <button type="button" id="delete_sequence" class="btn btn-danger">Delete</button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="image-table mt-4" id="image_list">
+            </div>
+        </div>
+        {% include 'components/copyrite.html' %}
+    </div>
+
+    <div class="left-side d-none image-detail-box bg-white p-2">
+        <div class="hide-image-box text-right mt-3">
+            <button class="btn btn-info" onclick="hide_image_detail_box()">
+                Back to Sequence
+            </button>
+        </div>
+
+        <div class="switch-detection mt-2 ml-auto">
+            <input class="" type="checkbox" id="switch_detection" data-toggle="toggle" data-on="Original" data-off="Detection" data-onstyle="success" data-offstyle="primary">
+        </div>
+
+        <div class="image-detail">
+            <div class="" id="image_detail_box">
+            </div>
+        </div>
+
+        <div class="image-detection mt-3 d-none">
+            <ul class="nav nav-tabs text-center border-bottom-0 " id="myTab" role="tablist">
+                    <li class="nav-item mtpw-label-tab active" style="width: 50%;">
+                        <a class="nav-link active" href="javascript: switchMpaillaryLable('mtpw');">MTPW Labels</a>
+                    </li>
+                    <li class="nav-item mapillary-label-tab border-bottom" style="width: 50%">
+                        <a class="nav-link" href="javascript: switchMpaillaryLable('mapillary');">Mapillary Labels</a>
+                    </li>
+                </ul>
+            <div class="card" style="border-radius: 0">
+                <div class="p-2">
+                    <div class=" actions text-right">
+                        {% if request.user.is_authenticated %}
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text" for="add_label">Add Label</label>
+                                </div>
+                                <select class="custom-select" id="add_label">
+                                    <option selected value="0">Please select label type</option>
+                                    {% for label_type in label_types %}
+                                        <option value="{{ label_type.pk }}" data-color="{{ label_type.color }}" data-type="{{ label_type.type }}">{{ label_type }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-flex flex-row justify-content-between">
+                                <button class="btn btn-secondary" id="lbl_reset" onclick="labelReset()">
+                                    Reset
+                                </button>
+                                <button class="btn btn-danger" id="lbl_delete" onclick="labelDelete()">
+                                    Delete
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="detections">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-board bg-light">
+        <div class="board">
+            <div class="small-screen small">
+                <div class="switch-full-screen switch_screen">
+                    <img class="w-100" src="{% static 'images/icon/flap.svg' %}">
+                </div>
+                <div class="switch-cover"></div>
+                <div class="map-board w-100 display" id="map">
+                </div>
+            </div>
+            <div class="full-screen board-w-400">
+                <div class="switch-full-screen switch_screen d-none" >
+                    <img class="w-100" src="{% static 'images/icon/flap.svg' %}">
+                </div>
+                <div class="switch-cover"></div>
+                {% if request.user.is_authenticated and request.user == sequence.user %}
+                    <div class="image-view-point" >
+                        <div class="view_point text-center">
+                            <span class="text-center m-0">
+                                {{ view_points }} View Points
+                            </span>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="image-view-point" style="cursor: pointer;" onclick="mark_view_point()" style="">
+                        <div class="view_point text-center">
+                            <span class="text-center m-0 disabled">
+                                {{ view_points }} View Points
+                            </span>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div id='sequence_viewer' class="image-box display"></div>
+            </div>
+            <div class="show-or-hide">
+                <div class="minimize-button" onclick="showOrHide()">
+                    <img class="w-100" src="data:image/svg+xml;charset=utf-8,%3C?xml version='1.0' encoding='UTF-8' standalone='no'?%3E %3Csvg width='22px' height='18px' viewBox='0 0 22 18' version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'%3E %3C!-- Generator: sketchtool 3.7.2 (28276) - http://www.bohemiancoding.com/sketch --%3E %3Ctitle%3E390F95AB-67C8-42FF-B9FF-C317EDED2467%3C/title%3E %3Cdesc%3ECreated with sketchtool.%3C/desc%3E %3Cdefs%3E %3Crect id='path-1' x='0' y='0' width='22' height='17' rx='4'/%3E %3Cfilter x='-50%25' y='-50%25' width='200%25' height='200%25' filterUnits='objectBoundingBox' id='filter-2'%3E %3CfeOffset dx='0' dy='1' in='SourceAlpha' result='shadowOffsetOuter1'/%3E %3CfeColorMatrix values='0 0 0 0 0.278431373 0 0 0 0 0.290196078 0 0 0 0 0.305882353 0 0 0 0.4 0' type='matrix' in='shadowOffsetOuter1'/%3E %3C/filter%3E %3C/defs%3E %3Cg id='Page-1' stroke='none' stroke-width='1' fill='none' fill-rule='evenodd'%3E %3Cg id='view_component_photo' transform='translate(-12.000000, -12.000000)'%3E %3Cg id='minimize' transform='translate(12.000000, 12.000000)'%3E %3Cg id='Rectangle-211'%3E %3Cuse fill='black' fill-opacity='1' filter='url(%23filter-2)' xlink:href='%23path-1'/%3E %3Cuse fill='%23FFFFFF' fill-rule='evenodd' xlink:href='%23path-1'/%3E %3C/g%3E %3Crect id='Rectangle-210' fill='%23474A4E' x='4' y='10' width='14' height='2' rx='100'/%3E %3C/g%3E %3C/g%3E %3C/g%3E %3C/svg%3E">
+                </div>
+                <div class="maximize-button d-none" onclick="showOrHide()">
+                    <img class="w-100" src="{% static 'images/icon/restore_map.svg' %}">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src='https://unpkg.com/mapillary-js@2.21.0/dist/mapillary.min.js'></script>
+<script src="{% static 'js/chart.min.js' %}"></script>
+<script>
+    var ctx = document.getElementById('myChart').getContext('2d');
+    var first_move = true;
+    $.ajaxSetup({
+        data: {csrfmiddlewaretoken: '{{ csrf_token }}' },
+    });
+    var current_node_point = null;
+    var current_node_key = '';
+    var current_order_number = 0;
+    toastr.options = {
+      "closeButton": false,
+      "debug": false,
+      "newestOnTop": false,
+      "progressBar": false,
+      "positionClass": "toast-top-right",
+      "preventDuplicates": false,
+      "onclick": null,
+      "showDuration": "300",
+      "hideDuration": "1000",
+      "timeOut": "5000",
+      "extendedTimeOut": "1000",
+      "showEasing": "swing",
+      "hideEasing": "linear",
+      "showMethod": "fadeIn",
+      "hideMethod": "fadeOut"
+    };
+
+    var current_page = '0';
+
+
+
+    mapboxgl.accessToken = mapboxToken;
+    // Create a popup, but don't add it to the map yet.
+    var popup = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false
+    });
+    var positions = [];
+    var image_keys = [];
+    positions.push({{ sequence.geometry_coordinates_ary }});
+    {% for image in sequence.coordinates_image %}
+        image_keys.push("{{ image }}")
+    {% endfor %}
+
+    var sceneData = [];
+    var item = {};
+    var scene_positions = [];
+    for (var j = 0; j < positions[0].length; j++)
+    {
+        scene_positions.push([positions[0][j][0], positions[0][j][1]]);
+        item = {
+            "type": "Feature",
+            "properties": {'key': image_keys[j]},
+            "geometry": {
+                "coordinates": [positions[0][j][0], positions[0][j][1]],
+                "type": "Point"
+            }
+        };
+        sceneData.push(item);
+    }
+
+    var first_image_key = "{{ first_image.key }}";
+
+    {% if not image_key is None and image_key != ''  %}
+        first_image_key = "{{ image_key }}";
+    {% endif %}
+
+    var first_image_index = image_keys.indexOf(first_image_key);
+    if (scene_positions.length > 0)
+        var first_point = scene_positions[first_image_index];
+    else
+        var first_point = null;
+
+
+
+    if (first_point != null) {
+        var map = new mapboxgl.Map({
+            container: 'map', // container id
+            style: 'mapbox://styles/mapbox/streets-v11', //hosted style id
+            center: first_point, // starting position
+            zoom: 14, // starting zoom
+            attributionControl: false
+        });
+    }
+    else {
+        var map = new mapboxgl.Map({
+            container: 'map', // container id
+            style: 'mapbox://styles/mapbox/streets-v11', //hosted style id
+            center: [-87.622088, 41.878781], // starting position
+            zoom: 14, // starting zoom
+            attributionControl: false
+        });
+    }
+    map.on('load', function() {
+        map.addSource('points', {
+            'type': 'geojson',
+            'data': {
+                'type': 'FeatureCollection',
+                'features': sceneData
+            }
+        });
+        map.addLayer({
+            'id': 'mapillary-images',
+            'type': 'circle',
+            'source': 'points',
+            "paint": {
+                "circle-color": "#039825",
+                "circle-radius": 6
+            }
+        });
+        if (map.getLayer('markers')) map.removeLayer('markers');
+        if (map.getSource('markers')) map.removeSource('markers');
+        map.addSource('markers', {
+             type: 'geojson',
+             data: {
+                 type: 'Feature',
+                 geometry: {
+                     type: 'Point',
+                     coordinates: first_point
+                 },
+                 properties: {
+                     title: 'You are here!',
+                     'marker-symbol': 'marker'
+                 }
+             }
+        });
+        map.addLayer({
+             id: 'markers',
+             type: 'circle',
+             source: 'markers',
+             paint: {
+                 "circle-color": "#e0400e",
+                 "circle-radius": 9
+             }
+        });
+    });
+
+    map.on('mouseenter', 'mapillary-images', function(e) {
+      // Change the cursor style as a UI indicator.
+      map.getCanvas().style.cursor = 'pointer';
+
+      var coordinates = e.features[0].geometry.coordinates.slice();
+      var key = e.features[0].properties.key;
+      var url = "https://images.mapillary.com/" + key + "/thumb-320.jpg";
+
+      // Ensure that if the map is zoomed out such that multiple
+      // copies of the feature are visible, the popup appears
+      // over the copy being pointed to.
+      while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+      }
+
+      // Populate the popup and set its coordinates
+      // based on the feature found.
+      popup.setLngLat(coordinates)
+      .setHTML("<img src='" + url + "' width='160'/>")
+      .addTo(map);
+    });
+
+    map.on('click', 'mapillary-images', function (e) {
+        var key = e.features[0].properties.key;
+        selected_poi_id = 0;
+        if ($('.minimize-button').hasClass('d-none') && $('.maximize-button').hasClass('d-none'))
+        {
+            $('.small').each(function (i) {
+                $(this).removeClass('d-none');
+            });
+            $('.minimize-button').removeClass('d-none');
+        }
+        mapillaryViewer.resize();
+        mapillaryViewer.moveToKey(key);
+    });
+
+    map.on('mouseleave', 'mapillary-images', function() {
+      map.getCanvas().style.cursor = '';
+      popup.remove();
+    });
+
+    $('.switch_screen').click(function () {
+         var full_screen = $('.full-screen');
+         var small_screen = $('.small-screen');
+         full_screen.removeClass('full-screen').removeClass('board-w-400').addClass('small-screen').addClass('small');
+         small_screen.removeClass('small-screen').removeClass('small').addClass('full-screen').addClass('board-w-400');
+         $('.switch_screen').each(function (i) {
+             $(this).removeClass('d-none');
+
+         });
+         $(this).addClass('d-none');
+
+         if (is_mapillary_viewer)
+         {
+             is_mapillary_viewer = false;
+             $('.maximize-button img').attr('src', "{% static 'images/icon/restore_viewer.svg' %}")
+         }
+         else
+         {
+             is_mapillary_viewer = true;
+             $('.maximize-button img').attr('src', "{% static 'images/icon/restore_map.svg' %}")
+         }
+
+         if (!$('.left-side.poi-box').hasClass('d-none')) {
+            $('.board-w-400').removeClass('board-w-400');
+            $('.full-screen').addClass('board-w-400');
+         }
+         mapillaryViewer.resize();
+         map.resize();
+    });
+
+    var is_mapillary_viewer = true;
+
+    var mapillaryViewer = new Mapillary.Viewer(
+        'sequence_viewer',
+        mapillaryClientId,
+        first_image_key,
+        {
+            component: {
+                cover: false,
+                tag: true,
+                popup: true,
+            },
+        }
+    );
+    mapillaryViewer.on(Mapillary.Viewer.nodechanged, function (node) {
+        tagComponent.removeAll();
+        current_node_point = [node.latLon.lat, node.latLon.lon];
+        current_node_key = node.key;
+        current_order_number = image_keys.indexOf(current_node_key);
+
+        if (map.getLayer('markers')) map.removeLayer('markers');
+        if (map.getSource('markers')) map.removeSource('markers');
+        map.addSource('markers', {
+             type: 'geojson',
+             data: {
+                 type: 'Feature',
+                 geometry: {
+                     type: 'Point',
+                     coordinates: [current_node_point[1], current_node_point[0]]
+                 },
+                 properties: {
+                     title: 'You are here!',
+                     'marker-symbol': 'marker'
+                 }
+             }
+        });
+        map.addLayer({
+             id: 'markers',
+             type: 'circle',
+             source: 'markers',
+             paint: {
+                 "circle-color": "#e0400e",
+                 "circle-radius": 9
+             }
+        });
+
+        map.flyTo({center: [current_node_point[1], current_node_point[0]]});
+        allClear();
+        if (state == 'detection_mtpu')
+            getImageLables();
+        else if (state == 'detection_mapillary')
+            getDetection(node.key);
+        if (first_move) {
+            first_move = false;
+        }
+        else
+            show_image_detail(node.key)
+    });
+    window.addEventListener('resize', function() { mapillaryViewer.resize(); });
+
+    function goto_page(pageNum, image_key='') {
+        $.ajax({
+            url: '{% url "sequence.ajax_get_image_list" unique_id=sequence.unique_id %}',
+            type: 'GET',
+            data: {'page': pageNum, 'image_key': image_key},
+            dataType: 'json',
+            success: function (data) {
+                if (data.status == 'failed')
+                    toastr.error(data.message);
+                else
+                {
+                    current_page = data.page;
+                    var href = location.protocol + '//' + location.host + location.pathname ;
+                    history.pushState({
+                        id: 'Sequence Detail'
+                    }, "{{ pageTitle }}", href + '?page=' + data.page);
+                    $('#image_list').html(data.image_list_box_html);
+                    if (data.image_key != null) {
+                        show_image_detail(data.image_key)
+                    }
+                }
+            }
+        });
+    }
+
+
+
+    $('.btn-save').click(function () {
+        if (!$('#edit_form').isValid())
+            return;
+
+        $.ajax({
+            url: "{% url 'sequence.ajax_save_sequence' unique_id=sequence.unique_id %}",
+            type: 'POST',
+            data: $('#edit_form').serialize(),
+            dataType: 'json',
+            success: function (data) {
+                if (data.status == 'failed')
+                    toastr.error(data.message);
+                else {
+                    toastr.success(data.message);
+                    $('#sequence_name h3').text(data.sequence['name']);
+                    $('#sequence_description p').text(data.sequence['description']);
+                    $('.item-transport-type .parent-type').html(data.sequence['transport_parent_html']);
+                    $('.item-transport-type .sub-type').html(data.sequence['transport_html']);
+                    var tag_html = '';
+                    for (var i = 0; i < data.sequence['tags'].length; i++) {
+                        tag_html += '<span class="tag pl-1 pr-1 mt-1 mb-1 mr-1">' + data.sequence['tags'][i] + '</span>';
+                    }
+                    $('#sequence_tags').html(tag_html);
+                }
+                $('.mtp-sequence-data').removeClass('d-none');
+                $('.edit-form').addClass('d-none');
+                $('.actions').removeClass('d-none');
+            }
+        });
+    });
+
+    $('.btn-cancel').click(function () {
+        $('.mtp-sequence-data').removeClass('d-none');
+        $('.edit-form').addClass('d-none');
+        $('.actions').removeClass('d-none');
+    });
+
+    $('.btn-edit').click(function () {
+        $('.mtp-sequence-data').addClass('d-none');
+        $('.edit-form').removeClass('d-none');
+        $('.actions').addClass('d-none');
+    });
+
+    $('#publish_swithch_sequence').click(function () {
+        $.ajax({
+            url: "{% url 'sequence.ajax_sequence_check_publish' unique_id=sequence.unique_id %}",
+            type: 'POST',
+            data: {},
+            dataType: 'json',
+            success: function (data) {
+                if (data.status == 'failed')
+                {
+                    toastr.error(data.message)
+                }
+                else {
+                    if (data.is_published)
+                    {
+                        $('#publish_swithch_sequence').removeClass('btn-success').addClass('btn-secondary').text('Unpublish');
+                    }
+                    else
+                    {
+                        $('#publish_swithch_sequence').addClass('btn-success').removeClass('btn-secondary').text('Publish Now');
+                    }
+                }
+            }
+        });
+    });
+
+    $('#delete_sequence').click(function () {
+        if ($(this).hasClass('disabled') || $(this).hasClass('d-none'))
+            return;
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This sequence should be remove from MTP.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.value) {
+                $('#delete_sequence_form').submit()
+            }
+        })
+    });
+
+    {% if not request.user.is_authenticated %}
+        $('.sequence-others .like img').css('cursor', 'pointer');
+        $('.sequence-others .like img').click(function () {
+            Swal.fire({
+                title: 'Need to login!',
+                html: 'Please click <a href="{% url 'login' %}">here</a> to login. <br>' +
+                        "If you don't have your account, please <a href=\"{% url 'signup' %}\">sign up</a>",
+                showCancelButton: false,
+                confirmButtonText: 'OK'
+            })
+        });
+    {% elif request.user != sequence.user %}
+        $('.sequence-others .like img').css('cursor', 'pointer');
+        $('.sequence-others .like img').click(function () {
+            $.ajax({
+                url: "{% url 'sequence.ajax_sequence_check_like' unique_id=sequence.unique_id %}",
+                type: 'POST',
+                data: {},
+                dataType: 'json',
+                success: function (data) {
+                    if (data.status == 'failed')
+                    {
+                        toastr.error(data.message)
+                    }
+                    else {
+                        var loved = "{% static 'images/icon/icons8-love-48.png' %}";
+                        var unloved = "{% static 'images/icon/icons8-love-100.png' %}"
+                        $('.sequence-others .like span').text(data.liked_count + ' Likes');
+                        if (data.liked_count == 0)
+                            $('.sequence-others .like img').attr('src', unloved);
+                        else
+                            $('.sequence-others .like img').attr('src', loved);
+                    }
+                }
+            });
+        });
+    {% endif %}
+
+    function show_image_detail(image_key) {
+        var url = "{% url 'sequence.ajax_get_image_detail' unique_id=sequence.unique_id image_key='image_key' %}";
+        url = url.replace('image_key', image_key);
+
+        var href = location.protocol + '//' + location.host + location.pathname ;
+        var page = current_page;
+        console.log(href)
+        history.pushState({
+            id: 'Image Detail'
+        }, "{{ pageTitle }}", href + '?page=' + page + '&image_key=' + image_key);
+
+        $.ajax({
+            url: url,
+            type: 'GET',
+            data: {},
+            dataType: 'json',
+            success: function (data) {
+                if (data.status == 'failed')
+                {
+                    toastr.error(data.message)
+                }
+                else {
+                    if (is_opened_side_bar)
+                        $('.image-detail-box').removeClass('d-none');
+                    $('#image_detail_box').html(data.image_detail_box_html);
+                    $('.right-board .image-view-point span').text(data.view_points + ' View Points');
+
+                }
+
+            }
+        });
+    }
+
+    function move_image(image_key) {
+        if (image_key == current_node_key)
+            show_image_detail(image_key)
+        else
+            mapillaryViewer.moveToKey(image_key);
+    }
+
+    function hide_image_detail_box() {
+        $('.image-detail-box').addClass('d-none');
+        goto_page(current_page);
+        allClear();
+        state = 'original';
+    }
+
+    {% if not request.user.is_authenticated %}
+        function mark_view_point(image_key) {
+            Swal.fire({
+                title: 'Need to login!',
+                html: 'Please click <a href="{% url 'login' %}">here</a> to login. <br>' +
+                        "If you don't have your account, please <a href=\"{% url 'signup' %}\">sign up</a>",
+                showCancelButton: false,
+                confirmButtonText: 'OK'
+            })
+        }
+    {% elif request.user != sequence.user %}
+        function mark_view_point() {
+            image_key = current_node_key
+            var url = "{% url 'sequence.ajax_image_mark_view' unique_id=sequence.unique_id image_key='image_key' %}";
+            url = url.replace('image_key', image_key)
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {},
+                dataType: 'json',
+                success: function (data) {
+                    if (data.status == 'failed')
+                    {
+                        toastr.error(data.message)
+                    }
+                    else {
+                        $('.image-others .view_point span').text(data.view_points + ' View Points');
+                        $('.right-board .image-view-point span').text(data.view_points + ' View Points');
+                    }
+                }
+            });
+        }
+    {% else %}
+        function mark_view_point() {
+            toastr.error('This sequense and image are imported by you.')
+        }
+    {% endif %}
+
+    function showOrHide() {
+        if ($('.minimize-button').hasClass('d-none') && $('.maximize-button').hasClass('d-none'))
+        {
+            $('.small').each(function (i) {
+                $(this).removeClass('d-none');
+            });
+            $('.minimize-button').removeClass('d-none');
+        }
+        else {
+            if ($('.minimize-button').hasClass('d-none'))
+            {
+                $('.minimize-button').removeClass('d-none');
+                $('.maximize-button').addClass('d-none');
+                $('.small').each(function (i) {
+                    $(this).removeClass('d-none');
+                });
+                mapillaryViewer.resize();
+                map.resize();
+            }
+            else if ($('.maximize-button').hasClass('d-none'))
+            {
+                $('.maximize-button').removeClass('d-none');
+                $('.minimize-button').addClass('d-none');
+                $('.small').each(function (i) {
+                    $(this).addClass('d-none');
+                });
+            }
+        }
+
+    }
+
+    function drawChart() {
+        var url = "{% url 'sequence.ajax_get_image_ele' unique_id=sequence.unique_id %}"
+        $.ajax({
+            url: url,
+            type: 'GET',
+            data: {},
+            dataType: 'json',
+            success: function (data) {
+                if (data.status == 'failed')
+                {
+                    toastr.error(data.message)
+                }
+                else {
+                    var num_ary = []
+                    for (var i=0; i<data.eles.length;i++) {
+                        num_ary.push(i+1)
+                    }
+                    var myLineChart = new Chart(document.getElementById("myChart"), {
+                        type: 'line',
+                        data: {
+                            labels: num_ary,
+                            datasets: [{
+                                data: data.eles,
+                                borderWidth: 1,
+                                borderColor: "#3e95cd",
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            'borderColor': 'red',
+                            'borderWidth': 1,
+                            'legend': { 'display': false },
+                            scales: {
+                                yAxes: [{
+                                    scaleLabel: {
+                                        display: true,
+                                        labelString: 'mtrs abv sea lvl'
+                                    }
+                                }],
+                                xAxes: [{
+                                    scaleLabel: {
+                                        display: true,
+                                        labelString: 'photo num'
+                                    }
+                                }]
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+    }
+
+    drawChart()
+
+    var label_type_ary = {};
+    var tagComponent = mapillaryViewer.getComponent("tag");
+    var polygon_tag_ary = [];
+    var current_clicked_label_id = '';
+    var current_clicked_label_ary = [];
+    var current_clicked_label_index = 0;
+    var current_hover_label_id = '';
+    var lastPos = null;
+    var is_drawing = false;
+    var label_tags = {};
+    var createdIndex = 0;
+    var state = 'original';
+
+    var allClear = function () {
+        label_type_ary = {};
+        tagComponent = mapillaryViewer.getComponent("tag");
+        polygon_tag_ary = [];
+        current_clicked_label_id = '';
+        current_clicked_label_ary = [];
+        current_clicked_label_index = 0;
+        current_hover_label_id = '';
+        lastPos = null;
+        is_drawing = false;
+        label_tags = {};
+        createdIndex = 0;
+        tagComponent.removeAll();
+        $('.image-detection .detections').html('');
+    }
+
+    function getDetection(image_key, types = ['trafficsigns', 'segmentations', 'instances']) {
+        label_type_ary = {};
+        polygon_tag_ary = [];
+        for (var k=0; k<types.length; k++) {
+            drawDetection(image_key, types[k])
+        }
+    }
+
+    function sortByKey(jsObj){
+        var startArray = [];
+
+        // Push each JSON Object entry in array by [key, value]
+        for(var i in jsObj)
+        {
+            startArray.push([i, jsObj[i]]);
+        }
+
+        var sortedArray = startArray.sort();
+
+        var sortedJson = {}
+
+        for (var i =0; i<sortedArray.length; i++) {
+            sortedJson[sortedArray[i][0]] = sortedArray[i][1]
+        }
+        // Run native sort function and returns sorted array.
+        return sortedJson;
+    }
+
+    function updateDetectionInSidebar() {
+        var html = '';
+        var detection_ary = sortByKey(label_type_ary);
+        jQuery.each(detection_ary, function(key, val) {
+            html += '<div class="border detection-tag" id="label_' + key + '" data-label-key="' + key + '" data-is-mine="' + val['is_mine'] + '"><span>' + key + ' <span style="color: #2F96B4">' + val['count'] + '</span></span></div>';
+        });
+        $('.image-detection .detections').html(html)
+    }
+
+    function drawDetection(image_key, type) {
+        $.ajax({
+            url: "https://a.mapillary.com/v3/object_detections/" + type + "?client_id=" + mapillaryClientId + "&image_keys=" + image_key,
+            success: function(data){
+                if (state == 'detection_mapillary') {
+                    var features = data.features;
+                    var polygon_ary = [];
+                    var image_label = null;
+                    var color = '#99e694';
+                    for (var i=0; i<features.length; i++) {
+                        var properties = features[i].properties;
+                        var polygon = properties.shape.coordinates[0];
+                        var value = properties.value;
+                        polygon_ary.push(polygon);
+                        addLabelTypeAry(properties.key, properties.value, color);
+                        addNewTag(properties.key, 'polygon', properties.shape.coordinates[0], properties.value, false);
+
+                    }
+                    updateDetectionInSidebar();
+                }
+            }
+        });
+    }
+
+    $('#switch_detection').change(function () {
+        allClear();
+        if ($(this).prop('checked')) {
+            $('.image-detection').removeClass('d-none');
+            $('.image-detail').addClass('d-none');
+            state = 'detection_mtpu';
+            getImageLables();
+        }
+        else {
+            $('.image-detection').addClass('d-none');
+            $('.image-detail').removeClass('d-none');
+            state = 'original';
+        }
+    })
+
+    var getImageLables = function () {
+        var url = "{% url 'sequence.ajax_get_image_label' unique_id=sequence.unique_id image_key='image_key' %}";
+        url = url.replace('image_key', current_node_key);
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {
+            },
+            dataType: 'json',
+            success: function (resp) {
+                if (resp.status == 'failed')
+                    toastr.error(resp.message);
+                else {
+                    if (state == 'detection_mtpu') {
+                        var image_label = null;
+                        for (var i=0; i<resp.data.image_labels.length; i++) {
+                            image_label = resp.data.image_labels[i];
+
+                            addLabelTypeAry(image_label.label_id, image_label.label_type_key, image_label.label_type_color);
+                            addNewTag(image_label.label_id, image_label.geo_type, image_label.geometry, image_label.label_type_key, image_label.is_mine);
+                        }
+                        updateDetectionInSidebar();
+                    }
+
+                }
+            }
+        });
+    }
+
+    var addLabelTypeAry = function (label_id, label_type_key, label_type_color) {
+        if (label_type_ary.hasOwnProperty(label_type_key)) {
+            if (!label_type_ary[label_type_key]['label_ids'].includes(label_id)){
+                label_type_ary[label_type_key]['label_ids'].push(label_id);
+                label_type_ary[label_type_key]['count'] = label_type_ary[label_type_key]['label_ids'].length;
+            }
+        }
+        else {
+            label_type_ary[label_type_key] = {
+                count: 1,
+                label_ids: [label_id],
+                label_type_color: label_type_color
+            };
+        }
+    }
+
+    var addNewTag = function (label_id, type, geo_data, label_type_key, is_mine) {
+        var id = label_id;
+        var tag;
+        var geometry;
+        var color = label_type_ary[label_type_key]['label_type_color'];
+        var linecolor = color;
+        if (is_mine)
+            linecolor = 'blue';
+
+        var options = {
+            editable: true,
+            text: id,
+            fillColor: color,
+            fillOpacity: 0.4,
+            lineColor: linecolor,
+        }
+        if (type == 'rect') {
+            geometry = new Mapillary.TagComponent.RectGeometry(geo_data);
+            tag = new Mapillary.TagComponent.OutlineTag(id, geometry, options);
+        } else if (type == 'point') {
+            geometry = new Mapillary.TagComponent.PointGeometry(geo_data);
+            tag = new Mapillary.TagComponent.SpotTag(id, geometry, options);
+        } else if (type == 'polygon') {
+            geometry = new Mapillary.TagComponent.PolygonGeometry(geo_data);
+            tag = new Mapillary.TagComponent.OutlineTag(id, geometry, options);
+        } else {
+            throw new Error("Unsupported geometry type");
+        }
+        tag.on(Mapillary.TagComponent.OutlineTag.geometrychanged, onTagGeometryChanged);
+        tagComponent.add([tag]);
+        label_tags[id] = {
+            tag: tag,
+            id: tag.id,
+            label_type_key: label_type_key,
+            is_mine: is_mine
+        }
+        return tag;
+    }
+
+    var setHoverEvent = function(label) {
+        if (label == undefined)
+            return;
+        if (label['tag'] == undefined)
+            return;
+
+        if (current_hover_label_id != '')
+            resetLabel(label_tags[current_hover_label_id], 'hover');
+        var color = label_type_ary[label['label_type_key']['label_type_color']];
+        var linecolor = color;
+        if (label['is_mine'])
+            linecolor = 'blue';
+        label['tag'].setOptions({
+            fillColor: color,
+            fillOpacity: 0.6,
+            lineColor: linecolor,
+            text: label['id']
+        });
+        current_hover_label_id = label['id'];
+    }
+
+    var setHoveredTag = function(pixelPoint) {
+        tagComponent.getTagIdsAt(pixelPoint)
+            .then(function(tagIds) {
+                if (tagIds.length > 0) {
+                    var hoveredTagId = tagIds[0];
+                    if (hoveredTagId == current_clicked_label_id) {
+                        current_hover_label_id = hoveredTagId;
+                        return;
+                    }
+                    if (current_hover_label_id == '') {
+                        current_hover_label_id = hoveredTagId;
+                        setHoverEvent(label_tags[hoveredTagId]);
+                    }
+                    else if (current_hover_label_id != hoveredTagId) {
+                        resetLabel(label_tags[current_hover_label_id], 'hover');
+                        current_hover_label_id = hoveredTagId;
+                        setHoverEvent(label_tags[hoveredTagId]);
+                    }
+                } else {
+                    if (current_hover_label_id != '') {
+                        resetLabel(label_tags[current_hover_label_id], 'hover');
+                    }
+                }
+            });
+    }
+
+    // Viewer event handling
+    // Listen to mousemove, mouseover and mouseup (which occurs
+    // just before a moveend) to set hovered tag and to keep
+    // track of last position.
+    var onMouseEvent = function(event) {
+        lastPos = event.pixelPoint;
+        setHoveredTag(event.pixelPoint);
+    }
+
+    mapillaryViewer.on("mousemove", onMouseEvent);
+    mapillaryViewer.on("mouseover", onMouseEvent);
+
+    // Clear last positions and hovered tag on mouse out.
+    mapillaryViewer.on("mouseout", function(event) {
+        lastPos = null;
+        if (current_hover_label_id != '') {
+            resetLabel(label_tags[current_hover_label_id], 'hover');
+            current_hover_label_id = '';
+        }
+    });
+
+    // Change hovered tag on mouse end if last position is
+    // defined (i.e. mouse is over Viewer).
+    mapillaryViewer.on("moveend", function(event) {
+        if (lastPos != null) {
+            setHoveredTag(lastPos);
+        }
+    });
+
+    var switchMpaillaryLable = function(type) {
+        allClear();
+        if (type == 'mtpw') {
+            $('li.mtpw-label-tab a').addClass('active');
+            $('li.mapillary-label-tab a').removeClass('active');
+            $('.image-detection .actions').removeClass('d-none');
+            state = 'detection_mtpu';
+            getImageLables();
+        }
+        else {
+            $('li.mtpw-label-tab a').removeClass('active');
+            $('li.mapillary-label-tab a').addClass('active');
+            $('.image-detection .actions').addClass('d-none');
+            state = 'detection_mapillary';
+            getDetection(current_node_key);
+        }
+    }
+
+    var resetLabel = function (label, type) {
+        if (label == undefined)
+            return;
+        if (label['tag'] == undefined)
+            return;
+        if (type == 'hover' && label['id'] == current_clicked_label_id) {
+            current_hover_label_id = '';
+            return;
+        }
+
+        var color = label_type_ary[label['label_type_key']][['label_type_color']];
+        var linecolor = color;
+        if (label['is_mine'])
+            linecolor = 'blue';
+        label['tag'].setOptions({
+            fillColor: color,
+            fillOpacity: 0.4,
+            lineColor: linecolor,
+            text: label['id']
+        });
+        if (type == 'click')
+        {
+            console.log('current_hover_label_id', current_hover_label_id)
+            console.log('current_clicked_label_id', current_clicked_label_id)
+            console.log(label['id'])
+            current_clicked_label_id = '';
+        }
+        else
+            current_hover_label_id = '';
+    }
+    var onTagGeometryChanged = function(tag) { console.log(tag.id, tag.geometry); };
+
+    {% if request.user.is_authenticated %}
+
+        $('#add_label').change(function () {
+            var label_type = $(this).val();
+            if (label_type == '0') {
+                is_drawing = false;
+                return;
+            }
+            is_drawing = true;
+            var geo_type = $(this).find('option[value="'+label_type+'"]').attr('data-type');
+            if (geo_type == 'polygon') {
+                 changeMode(Mapillary.TagComponent.TagMode.CreatePolygon);
+            }
+            else if (geo_type == 'point') {
+                changeMode(Mapillary.TagComponent.TagMode.CreatePoint)
+            }
+        })
+
+        function changeMode(tagMode) {
+            tagComponent.changeMode(tagMode);
+        }
+
+        // Create and add editable tags based on created geometry type
+
+
+        tagComponent.on(Mapillary.TagComponent.TagComponent.geometrycreated, function(geometry) {
+            var geo_data = null;
+            var geo_type = null;
+
+            var tag;
+            if (geometry instanceof Mapillary.TagComponent.RectGeometry) {
+                //tag = new Mapillary.TagComponent.OutlineTag(id, geometry, { editable: true, text: "rect" });
+            } else if (geometry instanceof Mapillary.TagComponent.PointGeometry) {
+                geo_type = 'point';
+                geo_data = geometry.point;
+            } else if (geometry instanceof Mapillary.TagComponent.PolygonGeometry) {
+                geo_type = 'polygon';
+                geo_data = geometry.polygon;
+            } else {
+                throw new Error("Unsupported geometry type");
+            }
+
+
+            var url = "{% url 'sequence.ajax_add_image_label' unique_id=sequence.unique_id image_key='image_key' %}";
+            url = url.replace('image_key', current_node_key);
+
+            var label_type = $('#add_label').val();
+            if (label_type != '0' && geo_type != null) {
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: {
+                        'geo_type': geo_type,
+                        'label_type': label_type,
+                        'geometry': JSON.stringify(geo_data)
+                    },
+                    dataType: 'json',
+                    success: function (resp) {
+                        if (resp.status == 'failed')
+                            toastr.error(resp.message);
+                        else {
+                            toastr.success(resp.message);
+                            addLabelTypeAry(resp.data.label_id, resp.data.label_type_key, resp.data.label_type_color)
+                            var is_mine = true;
+                            addNewTag(resp.data.label_id, geo_type, geo_data, resp.data.label_type_key, is_mine);
+                            updateDetectionInSidebar();
+                        }
+                        labelReset();
+                        is_drawing = false;
+                    }
+                });
+            }
+
+        });
+
+
+        var setUpEvent = function(label) {
+            if (label == undefined)
+                return;
+            if (label['tag'] == undefined)
+                return;
+            if (!label['is_mine'] || is_drawing)
+                return;
+            if (current_clicked_label_id != '')
+                resetLabel(label_tags[current_clicked_label_id], 'click');
+            var color = label_type_ary[label['label_type_key']['label_type_color']];
+            label['tag'].setOptions({
+                fillColor: color,
+                fillOpacity: 0.8,
+                lineColor: 'red',
+                text: label['id']
+            });
+            current_clicked_label_id = label['id'];
+        }
+
+        mapillaryViewer.on("mouseup", function (event) {
+            tagComponent.getTagIdsAt(event.pixelPoint)
+                .then(function(tagIds) {
+                    var tag_id_ary = [];
+                    if (tagIds.length > 0) {
+                        var label = null;
+                        for (var i = 0; i < tagIds.length; i++) {
+                            label = label_tags[tagIds[i]];
+                            if (label['is_mine'])
+                                tag_id_ary.push(tagIds[i])
+                        }
+                    }
+                    if (tag_id_ary.length > 0) {
+                        if (current_clicked_label_ary.length == tag_id_ary.length)
+                        {
+                            var index=0;
+                            var c = 0;
+                            c = 0;
+                            for (index=0; index<tag_id_ary.length; index++) {
+                                if (current_clicked_label_ary[index] == tag_id_ary[index])
+                                    c++;
+                            }
+                            if (c == tag_id_ary.length) {
+                                if (current_clicked_label_index < tag_id_ary.length)
+                                    current_clicked_label_index++;
+                                if (current_clicked_label_index == tag_id_ary.length)
+                                    current_clicked_label_index = 0;
+                                if (tag_id_ary.length == 1) {
+                                    resetLabel(label_tags[current_clicked_label_id], 'click');
+                                    current_clicked_label_ary = [];
+                                    return;
+                                }
+                                current_clicked_label_ary = [];
+                                for (index=0; index<tag_id_ary.length; index++) {
+                                    current_clicked_label_ary.push(tag_id_ary[index]);
+                                }
+                                setUpEvent(label_tags[tag_id_ary[current_clicked_label_index]]);
+                                return;
+                            }
+                        }
+                        current_clicked_label_ary = [];
+                        for (index=0; index<tag_id_ary.length; index++) {
+                            current_clicked_label_ary.push(tag_id_ary[index]);
+                        }
+                        current_clicked_label_index = 0;
+                        setUpEvent(label_tags[tag_id_ary[0]]);
+                    }
+                });
+        });
+
+        var removeLabelTags = function (tagIds) {
+            tagComponent.remove(tagIds)
+        }
+
+        var labelReset = function () {
+            changeMode(Mapillary.TagComponent.TagMode.Default);
+            $('#add_label').val('0');
+            resetLabel(label_tags[current_clicked_label_id], 'click');
+        }
+
+        var labelDelete = function () {
+            if (current_clicked_label_id == '')
+                return
+            var url = "{% url 'sequence.ajax_delete_image_label' unique_id=sequence.unique_id image_key='image_key' %}";
+            url = url.replace('image_key', current_node_key);
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {
+                    'label_id': current_clicked_label_id,
+                },
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.status == 'failed')
+                        toastr.error(resp.message);
+                    else {
+                        toastr.success(resp.message);
+                        tagComponent.remove([current_clicked_label_id]);
+                        var label_type_key = label_tags[current_clicked_label_id]['label_type_key'];
+                        delete label_tags[current_clicked_label_id];
+                        if (label_type_ary[label_type_key]['count'] > 1) {
+                            var index = label_type_ary[label_type_key]['label_ids'].indexOf(current_clicked_label_id);
+                            if (index > -1) {
+                                label_type_ary[label_type_key]['label_ids'].splice(index, 1);
+                                label_type_ary[label_type_key]['count'] = label_type_ary[label_type_key]['label_ids'].length;
+                            }
+                        }
+                        else if (label_type_ary[label_type_key]['count'] == 1) {
+                            delete label_type_ary[label_type_key];
+                        }
+                        updateDetectionInSidebar();
+                        current_clicked_label_id = '';
+                    }
+                }
+            });
+        }
+    {% endif %}
+
+    goto_page("{{ page }}", "{{ image_key }}");
+
+</script>
+{% endblock %}

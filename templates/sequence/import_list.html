@@ -1,0 +1,472 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block app_sequence %}active{% endblock %}
+{% block app_style %}<link rel="stylesheet" href="{% static 'css/sequence_style.css' %}">{% endblock %}
+{% block content %}
+{{ addSequenceForm.media }}
+<div class="main-body">
+    <div class="left-side d-flex flex-column justify-content-between">
+        <div>
+            <div class="text-right mt-2 mb-2 pt-3 pr-3">
+                <a type="button" class="btn btn-info" href="{% url 'sequence.index' %}">Back</a>
+            </div>
+
+            <div class="pl-3 pr-3">
+                <div class="pt-3 mb-3">
+                    <h3>
+                        Import Sequences
+                    </h3>
+                </div>
+                <p>
+                    {{ pageDescription }}
+                </p>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert m-3 alert-{% if message.tags %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="mt-4">
+
+            </div>
+
+            <div class="p-3" style="border-top: 1px solid #dee2e6;">
+                <form id="search_form">
+                    {% load bootstrap4 %}
+                    {% bootstrap_css %}
+                    {{ search_form.media }}
+                    {{ search_form.as_p }}
+                    <div class="form-group text-right mt-3">
+                        <button type="submit" class="save btn btn-primary">Search</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% include 'components/copyrite.html' %}
+    </div>
+    <div class="right-board list bg-light">
+        <div class="mt-4 mb-2 ml-auto mr-auto">
+            <div class="paginator">
+                {% if sequences.has_other_pages %}
+                    <ul class="pagination justify-content-center">
+                        {% if sequences.number != 1 %}
+                            <li class="page-item">
+                                <a class="btn paginator-btn page-link" data-page='1'>&laquo;</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="btn page-link" href="#" tabindex="-1" aria-disabled="true">&laquo;</a>
+                            </li>
+                        {% endif %}
+                        {% for i in sequences.paginator.pages %}
+                            {% if sequences.number == i %}
+                                <li class="active page-item"><a class="btn paginator-btn page-link bg-info" data-page='{{ i }}'>{{ i }}</a></li>
+                            {% else %}
+                                <li><a class="btn paginator-btn page-link" data-page='{{ i }}'>{{ i }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if sequences.number != sequences.paginator.num_pages %}
+                            <li class="page-item"><a class="btn paginator-btn page-link" data-page='{{ sequences.paginator.num_pages }}'>&raquo;</a></li>
+                        {% else %}
+                            <li class="disabled page-item"><a class="btn page-link disabled" href="#">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                {% endif %}
+            </div>
+            <div class="sequence-list">
+                {% if seq_count > 0 %}
+                    {% for sequence in sequences %}
+                        <div class="card row sequence pt-3 pb-3 m-3 d-flex flex-row align-items-center" id="sequence_{{ sequence.seq_key }}" data-sequence-id="{{ sequence.seq_key }}">
+                            <div class="col-md-4 ">
+                                <div class="min-map-box" style="height: 208px" id="map-{{ sequence.seq_key }}">
+                                </div>
+
+                            </div>
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col d-flex flex-row ">
+                                        <div class="detail-box">
+                                            <div class="sequence-main float-left">
+                                                <div class="sequence-captured-at text-info">
+                                                    <span>Captured:</span>
+                                                    <h6>
+                                                        {{ sequence.captured_at }}
+                                                    </h6>
+                                                </div>
+
+                                                <div class="sequence-created-at">
+                                                    <span>Uploaded:</span>
+                                                    <p class="mb-1">
+                                                        {{ sequence.created_at }}
+                                                    </p>
+                                                </div>
+
+                                                <div class="sequence-camera-make" style="color: blueviolet;">
+                                                    <span>Camera Make:</span>
+                                                    <p class="mb-1">
+                                                        {{ sequence.camera_make }}
+                                                    </p>
+                                                </div>
+
+                                                <div class="sequence-image-count" style="color: #a79f9f;">
+                                                    <span>Number of photos:</span>
+                                                    <p class="mb-1">
+                                                        {{ sequence.image_count }}
+                                                    </p>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col d-flex align-items-center">
+                                        <div class="transport-btn w-100 text-center">
+                                            <button type="button" class="btn btn-warning " onclick="show_add_modal('{{ sequence.seq_key }}')">
+                                                Import
+                                            </button>
+                                        </div>
+                                        <div class="added-form w-100 d-none">
+                                            <div class="sequence-name">
+                                                <p class="w-25 mb-0" style="color: #FF9800;">Name: </p>
+                                                <p class="w-75 contents">Test Name</p>
+                                            </div>
+                                            <div class="sequence-description">
+                                                <p class="w-25 mb-0" style="color: #9E9E9E;">Description: </p>
+                                                <p class="w-75 contents">This is my first test. so I want to import </p>
+                                            </div>
+                                            <div class="sequence-transport-type" style="color: blueviolet;">
+                                                <p class="w-25 mb-0">Transport Type: </p>
+                                                <p class="w-75 contents">Type 1</p>
+                                            </div>
+                                            <div class="sequence-tag">
+                                                <p class="w-25 mb-0">Tags: </p>
+                                                <p class="w-75 contents">
+                                                </p>
+                                            </div>
+                                            <div class="actions text-right">
+                                                <a type="button" target="_blank" href="{% url 'sequence.sequence_detail' unique_id='unique_id' %}">
+                                                    Go to detail page.
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-results d-flex justify-content-center align-items-center">
+                        <h5 class="text-info">No results match your criteria.</h5>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="paginator">
+                {% if sequences.has_other_pages %}
+                    <ul class="pagination justify-content-center">
+                        {% if sequences.number != 1 %}
+                            <li class="page-item">
+                                <a class="btn paginator-btn page-link" data-page='1'>&laquo;</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="btn page-link" href="#" tabindex="-1" aria-disabled="true">&laquo;</a>
+                            </li>
+                        {% endif %}
+                        {% for i in sequences.paginator.pages %}
+                            {% if sequences.number == i %}
+                                <li class="active page-item"><a class="btn paginator-btn page-link bg-info" data-page='{{ i }}'>{{ i }}</a></li>
+                            {% else %}
+                                <li><a class="btn paginator-btn page-link" data-page='{{ i }}'>{{ i }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if sequences.number != sequences.paginator.num_pages %}
+                            <li class="page-item"><a class="btn paginator-btn page-link" data-page='{{ sequences.paginator.num_pages }}'>&raquo;</a></li>
+                        {% else %}
+                            <li class="disabled page-item"><a class="btn page-link disabled" href="#">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade mt-5 pt-5" id="add_form_modal" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="add_form_modal" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="staticBackdropLabel">Information for Map the Paths</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+          <form id="add_form">
+              {% csrf_token %}
+
+              {{ addSequenceForm.as_p }}
+          </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-cancel" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-save" onclick="save_add_form()">Import Now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $.ajaxSetup({
+        data: {csrfmiddlewaretoken: '{{ csrf_token }}' },
+    });
+
+    $('.paginator-btn').click(function() {
+        var pageNum = $(this).data('page');
+        var current_url = window.location.href;
+        var a = current_url.split("?");
+        if (a.length < 2)
+        {
+            current_url += '?page=' + pageNum;
+            location.assign(current_url);
+            return;
+        }
+
+        var b = a[1].split("&");
+        var i = 0;
+        var c = [];
+        var is_changed = false;
+        for (i=0;i<b.length;i++) {
+            if (b[i].substr(0, 5) == 'page=') {
+                c.push('page=' + pageNum);
+                is_changed = true;
+            }
+            else {
+                c.push(b[i]);
+            }
+        }
+        var url = a[0] + '?' + c.join('&');
+        if (!is_changed)
+            url += '&page=' + pageNum;
+        location.assign(url);
+    });
+
+    toastr.options = {
+      "closeButton": false,
+      "debug": false,
+      "newestOnTop": false,
+      "progressBar": false,
+      "positionClass": "toast-top-right",
+      "preventDuplicates": false,
+      "onclick": null,
+      "showDuration": "300",
+      "hideDuration": "1000",
+      "timeOut": "5000",
+      "extendedTimeOut": "1000",
+      "showEasing": "swing",
+      "hideEasing": "linear",
+      "showMethod": "fadeIn",
+      "hideMethod": "fadeOut"
+    };
+
+    mapboxgl.accessToken = mapboxToken;
+    var positions = [];
+    var sequences = {};
+
+    var all_transport_types = {};
+    {% for type in all_transport_types %}
+        all_transport_types["{{ type.id }}"] = "{{ type.name }}";
+    {% endfor %}
+    {% for sequence in sequences %}
+        sequences['{{ sequence.seq_key }}'] = {
+            'name': '',
+            'description': '',
+            'transport_type': 0,
+            'tags': []
+        };
+        positions.push({{ sequence.geometry_coordinates_ary }});
+    {% endfor %}
+
+    var map_ary = [];
+    function draw_map(index, data) {
+        var obj = $('.min-map-box').eq(index);
+        var obj_id = obj.attr('id');
+        var sceneData = [];
+        var item = {};
+        var scene_positions = [];
+        for (var j = 0; j < data.length; j++)
+        {
+            var lat = data[j][1];
+            var lng = data[j][0];
+            scene_positions.push([lng, lat]);
+            item = {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "coordinates": [lng, lat],
+                    "type": "Point"
+                }
+            };
+            sceneData.push(item);
+        }
+
+        if (scene_positions.length > 0)
+            var first_point = scene_positions[0];
+        else
+            var first_point = null;
+
+        console.log('positions', sceneData)
+        if (first_point != null) {
+            var map = new mapboxgl.Map({
+                container: obj_id, // container id
+                style: 'mapbox://styles/mapbox/streets-v11', //hosted style id
+                center: first_point, // starting position
+                zoom: 12, // starting zoom
+                attributionControl: false
+            });
+        }
+        else {
+            var map = new mapboxgl.Map({
+                container: obj_id, // container id
+                style: 'mapbox://styles/mapbox/streets-v11', //hosted style id
+                center: [-87.622088, 41.878781], // starting position
+                zoom: 12, // starting zoom
+                attributionControl: false
+            });
+        }
+        map.on('load', function() {
+            map.addSource('points', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'FeatureCollection',
+                    'features': sceneData
+                }
+            });
+            map.addLayer({
+                'id': 'mapillary-images',
+                'type': 'circle',
+                'source': 'points',
+                "paint": {
+                    "circle-color": "#039825",
+                    "circle-radius": 6
+                }
+            });
+        });
+        map_ary.push(map);
+        map.resize();
+    }
+
+    for (i = 0; i < positions.length; i++)
+    {
+        draw_map(i, positions[i])
+    }
+
+    var selected_sequence_id = '';
+
+    function show_add_modal(id) {
+        selected_sequence_id = id;
+        var modal_form = $('#add_form_modal .modal-body');
+        $('.tagsinput .tag').each(function (index) {
+            $(this).remove();
+        });
+        modal_form.find('input[name="name"]').val('');
+        modal_form.find('textarea[name="description"]').val('');
+        modal_form.find('select[name="transport_type"]').val('');
+        modal_form.find('input[name="tag"]').val('');
+        $('#add_form_modal').modal('show');
+    }
+
+    function reset_added_form(id) {
+        selected_sequence_id = id;
+        sequences[selected_sequence_id]['name'] = '';
+        sequences[selected_sequence_id]['description'] = '';
+        sequences[selected_sequence_id]['transport_type'] = 0;
+        sequences[selected_sequence_id]['tags'] = [];
+
+        var added_form = $('#sequence_' + selected_sequence_id).find('.added-form');
+        var transport_btn = $('#sequence_' + selected_sequence_id).find('.transport-btn');
+
+        added_form.addClass('d-none');
+        transport_btn.removeClass('d-none');
+    }
+
+    function save_add_form() {
+
+        if (!$('#add_form').isValid())
+            return;
+
+        var modal_form = $('#add_form_modal .modal-body');
+        var name = modal_form.find('input[name="name"]').val();
+        var description = modal_form.find('textarea[name="description"]').val();
+        var transport_type = modal_form.find('select[name="transport_type"]').val();
+        var tags = modal_form.find('input[name="tag"]').val();
+        console.log(tags)
+        /*
+        sequences[selected_sequence_id]['name'] = name;
+        sequences[selected_sequence_id]['description'] = description;
+        sequences[selected_sequence_id]['transport_type'] = transport_type;
+        sequences[selected_sequence_id]['tags'] = tags;
+        */
+        var url = "{% url 'sequence.ajax_import' seq_key='seq_key' %}";
+        url = url.replace('seq_key', selected_sequence_id)
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: $('#add_form').serialize(),
+            dataType: 'json',
+            success: function (data) {
+                if (data.status == 'failed')
+                    toastr.error(data.message);
+                else {
+                    toastr.success(data.message);
+                    var added_form = $('#sequence_' + selected_sequence_id).find('.added-form');
+                    var transport_btn = $('#sequence_' + selected_sequence_id).find('.transport-btn');
+                    var action = $('#sequence_' + selected_sequence_id).find('.actions').find('a');
+                    var url = action.attr('href');
+
+                    url = url.replace('unique_id', data.unique_id);
+                    action.attr('href', url)
+
+                    added_form.removeClass('d-none');
+                    transport_btn.addClass('d-none');
+
+                    added_form.find('.sequence-name .contents').text(name);
+                    added_form.find('.sequence-description .contents').text(description);
+                    added_form.find('.sequence-transport-type .contents').text(all_transport_types[transport_type]);
+                    var tag_html = '';
+                    var tag_ary = tags.split(',');
+                    for (var i = 0; i < tag_ary.length; i++) {
+                        tag_html += '<span class="tag">' + tag_ary[i] + '</span>';
+                    }
+                    added_form.find('.sequence-tag .contents').html(tag_html);
+
+                    $('#add_form_modal').modal('hide');
+                }
+            }
+        });
+
+
+    }
+
+    function submit_form_data(next) {
+        if (next)
+            location.reload();
+    }
+
+    var page = 1;
+
+
+</script>
+{% endblock %}
